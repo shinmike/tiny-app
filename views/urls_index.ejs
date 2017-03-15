@@ -6,9 +6,20 @@
 <body>
 
   <header>
-    <% include ./partials/header %>
+    <% include ./partials/_header %>
   </header>
-
-    <!-- Add your EJS code here -->
+    <ul>
+      <% for (var i in urls) { %>
+        <li><%= i %> - <%= urls[i] %>
+          <form action="/urls/<%= i %>/delete" method="post">
+            <p>
+              <button>Delete</button>
+            </p>
+          </form>
+        </li>
+      <% } %>
+    </ul>
+<!--   <pre><%= JSON.stringify(urls, null, 4) %></pre> -->
 </body>
 </html>
+
