@@ -26,10 +26,22 @@ function generateRandomString() {
 }
 generateRandomString();
 
-// GET /
 // app.get('/', (req, res) => {
 //   res.redirect('http://www.example.com/')
 // });
+
+const users = {
+  "userRandomID": {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk"
+  }
+}
 
 var urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -70,6 +82,11 @@ app.get("/u/:shortURL", (req, res) => {
   let longURL = urlDatabase[req.params.shortURL];
   res.redirect(longURL);
 });
+
+app.get("/register", (req, res) => {
+  console.log("we are in registration page");
+  res.render("registration_page");
+})
 
 app.post("/urls", (req, res) => {
   // console.log("the value of req.body.longURL: " + req.body.longURL);
