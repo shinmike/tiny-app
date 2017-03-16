@@ -1,4 +1,6 @@
 var express = require("express");
+var cookieParser = require("cookie-parser");
+
 var app = express();
 var PORT = process.env.PORT || 8080;
 
@@ -11,6 +13,8 @@ app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({
   extended: true
 }));
+
+app.use(cookieParser());
 
 function generateRandomString() {
   var text = "";
@@ -32,24 +36,39 @@ var urlDatabase = {
   "9sm5xK": "http://www.google.com",
 };
 
+app.get("/", (req, res) => {
+  res.redirect('/urls');
+})
+
 app.get("/urls", (req, res) => {
   let templateVars = {
-    urls: urlDatabase
+    urls: urlDatabase,
+    username: req.cookies["username"]
   };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  res.render("urls_new", {username: req.cookies["username"]});
 });
 
 app.get("/urls/:id", (req, res) => {
   // console.log("the value of req.params.id: " + req.params.id)
+  // if(req.cookies.username === undefined) {
+  //   return res.status(401).send('You are not logged in.');
+  // }
   let templateVars = {
     shortURL: req.params.id,
-    longURL: urlDatabase[req.params.id]
+    longURL: urlDatabase[req.params.id],
+    username: req.cookies["username"]
   };
   res.render("urls_show", templateVars);
+});
+
+app.get("/u/:shortURL", (req, res) => {
+  // console.log(req.params)
+  let longURL = urlDatabase[req.params.shortURL];
+  res.redirect(longURL);
 });
 
 app.post("/urls", (req, res) => {
@@ -60,22 +79,6 @@ app.post("/urls", (req, res) => {
   res.redirect("/urls/" + shortURL);
 });
 
-app.get("/u/:shortURL", (req, res) => {
-  // console.log(req.params)
-  let longURL = urlDatabase[req.params.shortURL];
-  res.redirect(longURL);
-});
-
-app.get("/random", (req, res) => {
-  res.send(generateRandomString());
-})
-
-//delete
-app.post("/urls/:id/delete", (req, res) => {
-  delete urlDatabase[req.params.id];
-  res.redirect('/urls');
-})
-
 //update
 app.post("/urls/:id", (req, res) => {
   debugger;
@@ -85,8 +88,25 @@ app.post("/urls/:id", (req, res) => {
   res.redirect("/urls");
 });
 
+//delete
+app.post("/urls/:id/delete", (req, res) => {
+  delete urlDatabase[req.params.id];
+  res.redirect('/urls');
+})
+
+//cookie
+app.post("/login", (req, res) => {
+  res.cookie("username", req.body.username);
+  console.log('Cookies: ', req.body.username);
+  res.redirect("/urls")
+})
+
+//logout
+app.post("/logout", (req, res) => {
+  res.clearCookie("username");
+  res.redirect("/");
+})
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
-
-sdfsdf
