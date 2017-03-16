@@ -8,8 +8,17 @@
   <header>
     <% include ./partials/_header %>
   </header>
+
     <ul>
-      <li><%= shortURL %> - <%= longURL %></li>
+      <b>ShortURL:</b> <%= shortURL %>
     </ul>
+
+    <form action="/urls/<%= shortURL %>" method="post">
+      <p>
+        <input id="longURL" type="text" name="longURL" placeholder= <%= longURL %> style="width: 300px">
+        <input type="submit" value="Update">
+      </p>
+    </form>
+
 </body>
 </html>

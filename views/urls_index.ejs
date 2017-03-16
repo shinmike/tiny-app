@@ -12,10 +12,12 @@
       <% for (var i in urls) { %>
         <li><%= i %> - <%= urls[i] %>
           <form action="/urls/<%= i %>/delete" method="post">
-            <p>
-              <button>Delete</button>
-            </p>
+            <input type="submit" value="Delete" class="btn btn-default">
           </form>
+          <a href="/urls/<%= i %>">Edit</a>
+<!--           <form action="/urls/<%= i %>" method="post">
+            <input type="submit" value="Edit" class="btn btn-default">
+          </form> -->
         </li>
       <% } %>
     </ul>
