@@ -6,6 +6,8 @@ var PORT = process.env.PORT || 8080;
 
 const bodyParser = require("body-parser");
 
+const bcrypt = require('bcrypt');
+
 // Configuration
 app.set("view engine", "ejs");
 
@@ -16,45 +18,65 @@ app.use(bodyParser.urlencoded({
 
 app.use(cookieParser());
 
+function makeNewUser(email, password, id = generateRandomString()) {
+  return {
+    id,
+    email,
+    password
+  }
+}
+
+
+function makeNewUrl(longUrl, user_id, shortUrl = generateRandomString()) {
+  return {
+    shortUrl,
+    longUrl,
+    user_id
+  }
+}
+
+function storeUser(user) {
+  const id = user.id;
+  users[id] = user;
+  return id;
+}
+
+function storeUrl(url) {
+  const id = url.shortUrl;
+  urlDatabase[id] = url;
+  return id;
+}
+
 function generateRandomString() {
   var text = "";
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for(var i = 0; i < 6; i++ )
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    return text;
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  for(var i = 0; i < 6; i++ )
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+  return text;
 }
-generateRandomString();
 
-// app.get('/', (req, res) => {
-//   res.redirect('http://www.example.com/')
-// });
-
-const users = {
-  "userRandomID": {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur"
-  },
- "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk"
-  }
-};
+function doesUrlBelongToUser(shortUrl, urlDatabase) {
+  if (urlDatabase[shortUrl].user_id === req.cookies.userId) {
+    return true;
+  } return false;
+}
 
 var urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
+  "b2xVn2": makeNewUrl("http://www.lighthouselabs.ca", "userRandomID", "b2xVn2"),
+  "9sm5xK": makeNewUrl("http://www.google.com", "user2RandomID", "9sm5xK")
 };
 
-// Debugging: log entire users database for every request:
-// app.use((req, res, next) => {
-//   console.log("users database:", users);
-//   next();
-// });
+const users = {
+  "userRandomID": makeNewUser("user@example.com", "purple-monkey-dinosaur", "userRandomID"),
+  "user2RandomID": makeNewUser("user2@example.com", "dishwasher-funk", "user2RandomID")
+};
+
+function getUrlById(id) {
+  return urlDatabase.find(function(x) { return x.id === id; });
+}
 
 app.get("/", (req, res) => {
-  res.redirect('/urls');
+  res.redirect('/login');
 })
 
 app.get("/urls", (req, res) => {
@@ -63,30 +85,33 @@ app.get("/urls", (req, res) => {
     urls: urlDatabase,
     user: users[userId]
   };
+  //console.log(templateVars.user.id);
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  let userId = req.cookies.userId
-  res.render("urls_new", {user: users[userId]});
+  let userId = req.cookies.userId;
+    if (users[userId]) {
+    res.render("urls_new", {user: users[userId]})
+  } else {
+    res.redirect("/login")
+  };
 });
 
 app.get("/urls/:id", (req, res) => {
   let userId = req.cookies.userId
   let templateVars = {
     shortURL: req.params.id,
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,
     user: users[userId]
   };
   res.render("urls_show", templateVars);
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  // console.log(req.params)
   let longURL = urlDatabase[req.params.shortURL];
   res.redirect(longURL);
 });
-
 
 //---------------------------------------------------------------LOGIN
 
@@ -103,6 +128,7 @@ app.post("/login", (req, res) => {
     }
   }
   if (user && user.password === req.body.password) {
+    //setting the cookie value to the user id if the email and password are ok.
     res.cookie("userId", user.id);
     console.log('Cookies: ', user.id);
     res.redirect("/urls")
@@ -132,9 +158,6 @@ function validateEmailAndPassword(email, password) {
 function validateUniqueEmail(email) {
   for (var userId in users) {
     var user = users[userId]
-    // console.log("validateUniqueEmail: in the loop")
-    // console.log("email:", email)
-    // console.log("user:", user.email)
     if (user.email === email) {
       return false;
     }
@@ -143,52 +166,41 @@ function validateUniqueEmail(email) {
 }
 
 app.post("/register", (req, res) => {
-  // console.log("registration submitted");
-  // console.log(req.body);
 
-  // "I wish I had a function that could check an email and password and return true or false"
-  // validateEmailAndPassword(email, password) => bool
-  if (!validateEmailAndPassword(req.body.email, req.body.password)) {
+  const { email, password } = req.body;
+
+  if (!validateEmailAndPassword(email, password)) {
     res.status(400).send("Invalid email and/or password");
     return;
   }
-  // "I wish I had a function that could check an email for duplicate and return true or false"
-  if (!validateUniqueEmail(req.body.email)) {
+
+  if (!validateUniqueEmail(email)) {
     res.status(400).send("This email has already been registered");
     return;
   }
 
-  var userId = generateRandomString();
+  const user = makeNewUser(email, password);
+  const id = storeUser(user);
 
-  var newUser = {
-    id: userId,
-    email: req.body.email,
-    password: req.body.password
-  }
+  res.cookie("userId", id);
+  res.redirect('/urls');
 
-  users[userId] = newUser;
-
-  console.log('userId: ', userId);
-  res.cookie("userId", userId);
-  res.redirect('/');
 })
 
-// POST /register endpoint adds new user object in global users object
-
 app.post("/urls", (req, res) => {
-  // console.log("the value of req.body.longURL: " + req.body.longURL);
   const longURL = req.body.longURL;
-  const shortURL = generateRandomString();
-  urlDatabase[shortURL] = longURL;
+  var shortURL = storeUrl(makeNewUrl(longURL, req.cookies.userId));
   res.redirect("/urls/" + shortURL);
 });
 
 //update
 app.post("/urls/:id", (req, res) => {
-  debugger;
+
   const newURL = req.body.longURL;
   const shortURL = req.params.id;
-  urlDatabase[shortURL] = newURL;
+
+  storeUrl(makeNewUrl(newURL, req.cookies.userId, shortURL));
+
   res.redirect("/urls");
 });
 
@@ -201,3 +213,7 @@ app.post("/urls/:id/delete", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
+app.get('/data', (req, res) => {
+  res.json({users, urlDatabase});
+})

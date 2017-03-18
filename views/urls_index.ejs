@@ -4,23 +4,23 @@
   <title>TinyApp</title>
 </head>
 <body>
-
   <header>
     <% include ./partials/_header %>
   </header>
+    <a href="/urls/new">Create a short url</a>
     <ul>
       <% for (var i in urls) { %>
-        <li><%= i %> - <%= urls[i] %>
+        <% if (urls[i].user_id===user.id) { %>
+        <li>
+          <%= urls[i].shortUrl %> -
+          <%= urls[i].longUrl %>
           <form action="/urls/<%= i %>/delete" method="post">
             <input type="submit" value="Delete" class="btn btn-default">
           </form>
           <a href="/urls/<%= i %>">Edit</a>
-<!--           <form action="/urls/<%= i %>" method="post">
-            <input type="submit" value="Edit" class="btn btn-default">
-          </form> -->
         </li>
+         <% } %>
       <% } %>
     </ul>
-<!--   <pre><%= JSON.stringify(urls, null, 4) %></pre> -->
 </body>
 </html>
