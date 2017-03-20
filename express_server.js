@@ -26,7 +26,6 @@ function makeNewUser(email, password, id = generateRandomString()) {
   }
 }
 
-
 function makeNewUrl(longUrl, user_id, shortUrl = generateRandomString()) {
   return {
     shortUrl,
@@ -80,13 +79,18 @@ app.get("/", (req, res) => {
 })
 
 app.get("/urls", (req, res) => {
-  let userId = req.cookies.userId;
-  let templateVars = {
+  if (!req.cookies.userId) {
+  res.status(401).render("401");
+  return;
+  } else {
+    let userId = req.cookies.userId;
+    let templateVars = {
     urls: urlDatabase,
     user: users[userId]
-  };
-  //console.log(templateVars.user.id);
+    };
+    // console.log(templateVars.user.id);
   res.render("urls_index", templateVars);
+    }
 });
 
 app.get("/urls/new", (req, res) => {
@@ -94,7 +98,7 @@ app.get("/urls/new", (req, res) => {
     if (users[userId]) {
     res.render("urls_new", {user: users[userId]})
   } else {
-    res.redirect("/login")
+    res.status(401).render("401");
   };
 });
 
@@ -109,8 +113,17 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  let longURL = urlDatabase[req.params.shortURL];
-  res.redirect(longURL);
+  let shortURL = req.params.shortURL;
+  let URL = urlDatabase[shortURL];
+  // console.log(shortURL);
+  // console.log(req.params);
+  // console.log(urlDatabase);
+  // console.log(URL);
+  if (URL) {
+    res.redirect(URL.longUrl);
+  } else {
+    res.status(404).render("404");
+  }
 });
 
 //---------------------------------------------------------------LOGIN
@@ -121,21 +134,26 @@ app.get("/login", (req, res) => {
 })
 
 app.post("/login", (req, res) => {
+
+  var email = req.body.email;
+  var password = req.body.password;
+
   let user;
   for (var userId in users) {
     if (users[userId].email === req.body.user) {
       user = users[userId]
     }
   }
-  if (user && user.password === req.body.password) {
+  if(user && bcrypt.compareSync(password, user.password)){
     //setting the cookie value to the user id if the email and password are ok.
     res.cookie("userId", user.id);
     console.log('Cookies: ', user.id);
     res.redirect("/urls")
-  } else {
-    res.status(403).send("Bad credentials");
   }
-})
+  else {
+    res.status(401).send("Bad credentials");
+  }
+});
 
 //---------------------------------------------------------------LOGOUT
 
@@ -147,7 +165,7 @@ app.post("/logout", (req, res) => {
 //---------------------------------------------------------------REGISTER
 
 app.get("/register", (req, res) => {
-  console.log("we are in registration page");
+  // console.log("we are in registration page");
   res.render("registration_page");
 })
 
@@ -167,9 +185,14 @@ function validateUniqueEmail(email) {
 
 app.post("/register", (req, res) => {
 
-  const { email, password } = req.body;
+  var email = req.body.email;
+  var password = req.body.password;
+  var passwordHash = bcrypt.hashSync(password, 10);
 
-  if (!validateEmailAndPassword(email, password)) {
+
+  //const { email, password } = req.body;
+
+  if (!validateEmailAndPassword(email, passwordHash)) {
     res.status(400).send("Invalid email and/or password");
     return;
   }
@@ -179,8 +202,10 @@ app.post("/register", (req, res) => {
     return;
   }
 
-  const user = makeNewUser(email, password);
+  const user = makeNewUser(email, passwordHash);
   const id = storeUser(user);
+
+  // console.log(user);
 
   res.cookie("userId", id);
   res.redirect('/urls');
@@ -213,6 +238,8 @@ app.post("/urls/:id/delete", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
+//---------------------------------------------------------------DATA
 
 app.get('/data', (req, res) => {
   res.json({users, urlDatabase});

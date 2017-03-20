@@ -7,7 +7,9 @@
   <header>
     <% include ./partials/_header %>
   </header>
-    <a href="/urls/new">Create a short url</a>
+    <br>
+    <a href="/urls/new">Create a New Short Link</a>
+    <br><br>
     <ul>
       <% for (var i in urls) { %>
         <% if (urls[i].user_id===user.id) { %>
@@ -19,7 +21,7 @@
           </form>
           <a href="/urls/<%= i %>">Edit</a>
         </li>
-         <% } %>
+        <% } %>
       <% } %>
     </ul>
 </body>
